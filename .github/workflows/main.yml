@@ -1,0 +1,32 @@
+name: Deploy to Azure VM
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.AZURE_SSH_KEY }}
+
+    - name: Deploy to Azure VM
+      run: |
+        ssh -o StrictHostKeyChecking=no ${{ secrets.AZURE_USER }}@${{ secrets.AZURE_HOST }} << 'EOF'
+          sudo apt update
+          sudo apt install docker.io -y
+          cd ~/myapp || mkdir ~/myapp && cd ~/myapp
+          rm -rf *
+          git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git .
+          docker stop myapp || true
+          docker rm myapp || true
+          docker build -t myapp .
+          docker run -d -p 80:80 --name myapp myapp
+        EOF
